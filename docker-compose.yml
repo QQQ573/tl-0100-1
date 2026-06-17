@@ -48,7 +48,7 @@ services:
     container_name: study-tour-frontend
     restart: always
     ports:
-      - "3000:80"
+      - "3001:80"
     environment:
       TZ: Asia/Shanghai
     depends_on:

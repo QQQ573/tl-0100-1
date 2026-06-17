@@ -56,3 +56,26 @@ CREATE TABLE IF NOT EXISTS payment (
     callback_content TEXT,
     KEY idx_out_trade_no (out_trade_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付记录表';
+
+CREATE TABLE IF NOT EXISTS supplement_order (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    supplement_no VARCHAR(64) NOT NULL COMMENT '补差单号',
+    parent_order_id BIGINT NOT NULL COMMENT '父订单ID',
+    from_level VARCHAR(50) NOT NULL COMMENT '原档位',
+    to_level VARCHAR(50) NOT NULL COMMENT '目标档位',
+    from_product_id BIGINT COMMENT '原产品ID',
+    to_product_id BIGINT COMMENT '目标产品ID',
+    from_product_name VARCHAR(255) COMMENT '原产品名称',
+    to_product_name VARCHAR(255) COMMENT '目标产品名称',
+    from_price DECIMAL(10, 2) NOT NULL COMMENT '原产品价格',
+    to_price DECIMAL(10, 2) NOT NULL COMMENT '目标产品价格',
+    diff_amount DECIMAL(10, 2) NOT NULL COMMENT '差价金额',
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/PAID/CANCELLED',
+    effective_level VARCHAR(50) COMMENT '生效档位快照',
+    effective_coverage VARCHAR(500) COMMENT '生效保额快照JSON',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    paid_at DATETIME,
+    UNIQUE KEY uk_supplement_no (supplement_no),
+    KEY idx_parent_order_id (parent_order_id),
+    KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='补差单表';

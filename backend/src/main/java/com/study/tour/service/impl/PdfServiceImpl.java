@@ -17,9 +17,11 @@ import com.itextpdf.layout.properties.UnitValue;
 import com.study.tour.entity.Order;
 import com.study.tour.entity.OrderItem;
 import com.study.tour.entity.Student;
+import com.study.tour.entity.SupplementOrder;
 import com.study.tour.repository.OrderItemRepository;
 import com.study.tour.repository.OrderRepository;
 import com.study.tour.repository.StudentRepository;
+import com.study.tour.repository.SupplementOrderRepository;
 import com.study.tour.service.PdfService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,9 @@ public class PdfServiceImpl implements PdfService {
 
     @Autowired
     private StudentRepository studentRepository;
+
+    @Autowired
+    private SupplementOrderRepository supplementOrderRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy年MM月dd日");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss");
@@ -146,6 +151,19 @@ public class PdfServiceImpl implements PdfService {
                 .orElseThrow(() -> new RuntimeException("订单不存在"));
         Student student = studentRepository.findById(order.getStudentId()).orElse(null);
 
+        String effectiveLevel = "BASIC";
+        String effectiveCoverage = null;
+        List<SupplementOrder> paidSupplements = supplementOrderRepository
+                .findByParentOrderIdAndStatus(orderId, "PAID");
+        if (!paidSupplements.isEmpty()) {
+            SupplementOrder latest = paidSupplements.get(paidSupplements.size() - 1);
+            effectiveLevel = latest.getEffectiveLevel();
+            effectiveCoverage = latest.getEffectiveCoverage();
+        }
+
+        String productName = "暑期研学出行综合险（" + getLevelDisplayName(effectiveLevel) + "）";
+        String totalCoverage = getTotalCoverage(effectiveLevel);
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             PdfDocument pdfDoc = new PdfDocument(new PdfWriter(baos));
@@ -185,9 +203,9 @@ public class PdfServiceImpl implements PdfService {
             infoTable.addCell(createHeaderCell(""));
 
             infoTable.addCell(new Cell().add(new Paragraph("保险产品").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("暑期研学出行综合险").setFontSize(10)));
+            infoTable.addCell(new Cell().add(new Paragraph(productName).setFontSize(10)));
             infoTable.addCell(new Cell().add(new Paragraph("保险金额").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("人民币 50 万元").setFontSize(10)));
+            infoTable.addCell(new Cell().add(new Paragraph(totalCoverage).setFontSize(10)));
             infoTable.addCell(new Cell().add(new Paragraph("保险期间").setFontSize(10)));
             infoTable.addCell(new Cell().add(new Paragraph(
                     order.getCampStartDate() != null ? order.getCampStartDate().format(DATE_FORMATTER) : "" 
@@ -202,14 +220,24 @@ public class PdfServiceImpl implements PdfService {
             infoTable.addCell(createHeaderCell("保障范围"));
             infoTable.addCell(createHeaderCell(""));
 
-            infoTable.addCell(new Cell().add(new Paragraph("意外身故/伤残").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("50万元").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("意外医疗费用").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("5万元").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("紧急救援服务").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("10万元").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("行程取消损失").setFontSize(10)));
-            infoTable.addCell(new Cell().add(new Paragraph("5000元").setFontSize(10)));
+            java.util.Map<String, String> coverageItems = getCoverageItems(effectiveLevel);
+            for (java.util.Map.Entry<String, String> entry : coverageItems.entrySet()) {
+                infoTable.addCell(new Cell().add(new Paragraph(entry.getKey()).setFontSize(10)));
+                infoTable.addCell(new Cell().add(new Paragraph(entry.getValue()).setFontSize(10)));
+            }
+
+            if (!paidSupplements.isEmpty()) {
+                infoTable.addCell(createHeaderCell("补差升档记录"));
+                infoTable.addCell(createHeaderCell(""));
+                for (SupplementOrder sp : paidSupplements) {
+                    infoTable.addCell(new Cell().add(new Paragraph(
+                            sp.getFromProductName() + " → " + sp.getToProductName()
+                    ).setFontSize(9)));
+                    infoTable.addCell(new Cell().add(new Paragraph(
+                            "补差 ¥" + sp.getDiffAmount() + "（" + sp.getPaidAt().format(DATE_FORMATTER) + "生效）"
+                    ).setFontSize(9)));
+                }
+            }
 
             document.add(infoTable);
             document.add(new Paragraph("\n"));
@@ -242,6 +270,16 @@ public class PdfServiceImpl implements PdfService {
                 .orElseThrow(() -> new RuntimeException("订单不存在"));
         Student student = studentRepository.findById(order.getStudentId()).orElse(null);
 
+        String effectiveLevel = "BASIC";
+        List<SupplementOrder> paidSupplements = supplementOrderRepository
+                .findByParentOrderIdAndStatus(orderId, "PAID");
+        if (!paidSupplements.isEmpty()) {
+            effectiveLevel = paidSupplements.get(paidSupplements.size() - 1).getEffectiveLevel();
+        }
+
+        String badgeAmount = getBadgeAmount(effectiveLevel);
+        String levelDisplay = getLevelDisplayName(effectiveLevel);
+
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
             PdfDocument pdfDoc = new PdfDocument(new PdfWriter(baos));
@@ -265,13 +303,13 @@ public class PdfServiceImpl implements PdfService {
                     .setMarginTop(10);
             document.add(name);
 
-            Paragraph desc = new Paragraph("暑期研学出行险")
+            Paragraph desc = new Paragraph("暑期研学出行险（" + levelDisplay + "）")
                     .setFontSize(10)
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginTop(5);
             document.add(desc);
 
-            Paragraph amount = new Paragraph("保额 ¥500,000")
+            Paragraph amount = new Paragraph("保额 " + badgeAmount)
                     .setFontSize(12)
                     .setBold()
                     .setFontColor(new DeviceRgb(204, 0, 0))
@@ -347,5 +385,56 @@ public class PdfServiceImpl implements PdfService {
         }
 
         return result.toString();
+    }
+
+    private String getLevelDisplayName(String level) {
+        return switch (level) {
+            case "BASIC" -> "基础版";
+            case "STANDARD" -> "标准版";
+            case "PREMIUM" -> "尊享版";
+            default -> level;
+        };
+    }
+
+    private String getTotalCoverage(String level) {
+        return switch (level) {
+            case "BASIC" -> "人民币 20 万元";
+            case "STANDARD" -> "人民币 50 万元";
+            case "PREMIUM" -> "人民币 100 万元";
+            default -> "人民币 20 万元";
+        };
+    }
+
+    private String getBadgeAmount(String level) {
+        return switch (level) {
+            case "BASIC" -> "¥200,000";
+            case "STANDARD" -> "¥500,000";
+            case "PREMIUM" -> "¥1,000,000";
+            default -> "¥200,000";
+        };
+    }
+
+    private java.util.LinkedHashMap<String, String> getCoverageItems(String level) {
+        java.util.LinkedHashMap<String, String> map = new java.util.LinkedHashMap<>();
+        switch (level) {
+            case "PREMIUM":
+                map.put("意外身故/伤残", "100万元");
+                map.put("意外医疗费用", "10万元");
+                map.put("紧急救援服务", "20万元");
+                map.put("行程取消损失", "1万元");
+                break;
+            case "STANDARD":
+                map.put("意外身故/伤残", "50万元");
+                map.put("意外医疗费用", "5万元");
+                map.put("紧急救援服务", "10万元");
+                map.put("行程取消损失", "5000元");
+                break;
+            default:
+                map.put("意外身故/伤残", "20万元");
+                map.put("意外医疗费用", "2万元");
+                map.put("紧急救援服务", "5万元");
+                break;
+        }
+        return map;
     }
 }

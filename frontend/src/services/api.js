@@ -43,6 +43,12 @@ export const studentApi = {
   getStudentPublicInfo: (id) => api.get(`/students/${id}/public`),
 }
 
+export const supplementApi = {
+  getUpgradePreview: (parentOrderId) => api.get(`/supplement/preview/${parentOrderId}`),
+  createSupplementOrder: (data) => api.post('/supplement', data),
+  getSupplementsByParentOrderId: (parentOrderId) => api.get(`/supplement/parent/${parentOrderId}`),
+}
+
 export const pdfApi = {
   getAgreementUrl: (orderId) => `/api/pdf/agreement/${orderId}`,
   getInsuranceUrl: (orderId) => `/api/pdf/insurance/${orderId}`,

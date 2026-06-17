@@ -7,6 +7,7 @@ import com.study.tour.entity.*;
 import com.study.tour.enums.OrderStatus;
 import com.study.tour.repository.*;
 import com.study.tour.service.OrderService;
+import com.study.tour.service.SupplementOrderService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Autowired
     private PaymentRepository paymentRepository;
+
+    @Autowired
+    private SupplementOrderRepository supplementOrderRepository;
 
     @Override
     @Transactional
@@ -154,12 +158,8 @@ public class OrderServiceImpl implements OrderService {
             throw new RuntimeException("已开营的订单不可退订");
         }
 
-        if (paymentRepository.existsByOutTradeNoAndStatus(
-                order.getOutTradeNo(), "SUCCESS")) {
-            boolean hasPendingSupplement = false;
-            if (hasPendingSupplement) {
-                throw new RuntimeException("存在私募补差在途，暂不可退订");
-            }
+        if (supplementOrderRepository.existsByParentOrderIdAndStatus(orderId, "PENDING")) {
+            throw new RuntimeException("存在私募补差在途，暂不可退订");
         }
 
         order.setStatus(OrderStatus.REFUNDED.name());

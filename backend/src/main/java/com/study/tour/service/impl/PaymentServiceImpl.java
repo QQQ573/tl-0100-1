@@ -12,10 +12,12 @@ import com.study.tour.repository.OrderRepository;
 import com.study.tour.repository.PaymentRepository;
 import com.study.tour.repository.StudentRepository;
 import com.study.tour.service.PaymentService;
+import com.study.tour.service.SupplementOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +37,15 @@ public class PaymentServiceImpl implements PaymentService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private SupplementOrderService supplementOrderService;
+
     @Override
     public String mockPay(String outTradeNo) {
+        if (outTradeNo.startsWith("SP")) {
+            return "模拟补差支付链接: /payment/mock/callback?outTradeNo=" + outTradeNo + "&tradeStatus=SUCCESS";
+        }
+
         Order order = orderRepository.findByOutTradeNo(outTradeNo)
                 .orElseThrow(() -> new RuntimeException("订单不存在"));
 
@@ -54,6 +63,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         if (paymentRepository.existsByOutTradeNoAndStatus(outTradeNo, PaymentStatus.SUCCESS.name())) {
             return "success";
+        }
+
+        if (outTradeNo.startsWith("SP")) {
+            return handleSupplementCallback(request);
         }
 
         Order order = orderRepository.findByOutTradeNo(outTradeNo)
@@ -84,6 +97,35 @@ public class PaymentServiceImpl implements PaymentService {
                 }
             }
         }
+
+        return "success";
+    }
+
+    private String handleSupplementCallback(PaymentCallbackRequest request) {
+        String outTradeNo = request.getOutTradeNo();
+
+        if (!"SUCCESS".equals(request.getTradeStatus())) {
+            Payment payment = Payment.builder()
+                    .outTradeNo(outTradeNo)
+                    .amount(BigDecimal.ZERO)
+                    .status(PaymentStatus.FAILED.name())
+                    .payTime(LocalDateTime.now())
+                    .callbackContent(toJson(request))
+                    .build();
+            paymentRepository.save(payment);
+            return "success";
+        }
+
+        supplementOrderService.handleSupplementPaymentSuccess(outTradeNo);
+
+        Payment payment = Payment.builder()
+                .outTradeNo(outTradeNo)
+                .amount(BigDecimal.ZERO)
+                .status(PaymentStatus.SUCCESS.name())
+                .payTime(LocalDateTime.now())
+                .callbackContent(toJson(request))
+                .build();
+        paymentRepository.save(payment);
 
         return "success";
     }
