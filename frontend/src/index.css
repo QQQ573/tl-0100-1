@@ -1,0 +1,74 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f5f7fa;
+  color: #333;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-header {
+  text-align: center;
+  padding: 40px 0 20px;
+}
+
+.page-header h1 {
+  font-size: 32px;
+  color: #1890ff;
+  margin-bottom: 10px;
+}
+
+.page-header p {
+  color: #666;
+  font-size: 16px;
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.badge-insured {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #52c41a, #389e0d);
+  color: white;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.price-tag {
+  color: #ff4d4f;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.price-tag::before {
+  content: '¥';
+  font-size: 16px;
+  margin-right: 2px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 30px 0 16px;
+  padding-left: 12px;
+  border-left: 4px solid #1890ff;
+}
