@@ -25,13 +25,15 @@ public class PaymentController {
 
     @GetMapping("/mock/callback")
     @Operation(summary = "模拟支付回调（幂等）")
-    public String mockCallback(PaymentCallbackRequest request) {
-        return paymentService.handleCallback(request);
+    public Result<String> mockCallback(PaymentCallbackRequest request) {
+        String result = paymentService.handleCallback(request);
+        return Result.success(result);
     }
 
     @PostMapping("/callback")
     @Operation(summary = "支付回调接口（幂等）")
-    public String callback(@RequestBody PaymentCallbackRequest request) {
-        return paymentService.handleCallback(request);
+    public Result<String> callback(@RequestBody PaymentCallbackRequest request) {
+        String result = paymentService.handleCallback(request);
+        return Result.success(result);
     }
 }

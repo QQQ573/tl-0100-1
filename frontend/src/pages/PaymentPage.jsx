@@ -105,24 +105,38 @@ function PaymentPage() {
             </p>
           </div>
 
-          <Button
-            type="primary"
-            size="large"
-            block
-            loading={loading}
-            onClick={handlePay}
-            disabled={order.status !== 'PENDING'}
-          >
-            {paying ? (
-              <span>
-                <LoadingOutlined /> 支付处理中...
-              </span>
-            ) : order.status === 'PAID' ? (
-              '已支付'
-            ) : (
-              '模拟支付 ¥' + order.totalAmount
-            )}
-          </Button>
+          {order.status === 'PENDING' && (
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <Button
+                type="primary"
+                size="large"
+                block
+                loading={loading}
+                onClick={handlePay}
+              >
+                {paying ? (
+                  <span>
+                    <LoadingOutlined /> 支付处理中...
+                  </span>
+                ) : (
+                  '模拟支付 ¥' + order.totalAmount
+                )}
+              </Button>
+              <Button size="large" block onClick={() => navigate('/')}>
+                继续购物
+              </Button>
+            </Space>
+          )}
+          {order.status === 'PAID' && (
+            <Space size="middle" style={{ width: '100%', justifyContent: 'center' }}>
+              <Button size="large" onClick={() => navigate('/')}>
+                继续购物
+              </Button>
+              <Button type="primary" size="large" onClick={() => navigate(`/order-success?outTradeNo=${outTradeNo}`)}>
+                查看订单
+              </Button>
+            </Space>
+          )}
         </Space>
       </Card>
     </div>

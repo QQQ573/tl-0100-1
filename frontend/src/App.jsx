@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Layout, Menu } from 'antd'
 import { HomeOutlined, ShoppingCartOutlined, UserOutlined } from '@ant-design/icons'
 import HomePage from './pages/HomePage'
@@ -7,12 +7,21 @@ import CheckoutPage from './pages/CheckoutPage'
 import PaymentPage from './pages/PaymentPage'
 import OrderSuccessPage from './pages/OrderSuccessPage'
 import StudentPage from './pages/StudentPage'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 const { Header, Content, Footer } = Layout
 
 function App() {
+  const location = useLocation()
   const [cartItems, setCartItems] = useState([])
+
+  const selectedKey = useMemo(() => {
+    const path = location.pathname
+    if (path === '/' || path === '/order-success') return 'home'
+    if (path.startsWith('/cart') || path.startsWith('/checkout') || path.startsWith('/payment')) return 'cart'
+    if (path.startsWith('/student')) return 'student'
+    return 'home'
+  }, [location.pathname])
 
   const addToCart = (product) => {
     setCartItems((prev) => {
@@ -60,7 +69,7 @@ function App() {
         <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1890ff', marginRight: '40px' }}>
           🏕️ 暑期研学保障中心
         </div>
-        <Menu mode="horizontal" items={menuItems} style={{ flex: 1, borderBottom: 'none' }} />
+        <Menu mode="horizontal" items={menuItems} selectedKeys={[selectedKey]} style={{ flex: 1, borderBottom: 'none' }} />
       </Header>
       <Content style={{ padding: '0 0 40px' }}>
         <Routes>
