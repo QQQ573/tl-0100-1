@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Card, Button, Input, Form, message, Space, Typography, Row, Col, Tag, Spin, Divider, Descriptions, Modal, List, Radio } from 'antd'
+import { Card, Button, Input, Form, message, Space, Typography, Row, Col, Tag, Spin, Divider, Descriptions, Modal, List, Radio, Tooltip } from 'antd'
 import { SearchOutlined, SafetyOutlined, IdcardOutlined, FilePdfOutlined, RiseOutlined } from '@ant-design/icons'
 import { studentApi, orderApi, pdfApi, supplementApi, paymentApi } from '../services/api'
+import dayjs from 'dayjs'
 
 const { Title, Text } = Typography
 
@@ -180,10 +181,34 @@ function StudentPage() {
 
   const canUpgrade = (order) => {
     if (order.status !== 'PAID') return false
-    if (order.campStartDate && new Date(order.campStartDate) <= new Date()) return false
+    if (order.campStartDate && dayjs(order.campStartDate).isBefore(dayjs(), 'day')) return false
     const supplements = supplementMap[order.id] || []
     if (supplements.some(s => s.status === 'PENDING')) return false
     return true
+  }
+
+  const canRefund = (order) => {
+    if (order.status !== 'PAID') return false
+    if (order.campStartDate && dayjs(order.campStartDate).isBefore(dayjs(), 'day')) return false
+    const supplements = supplementMap[order.id] || []
+    if (supplements.some(s => s.status === 'PENDING')) return false
+    return true
+  }
+
+  const getRefundDisabledReason = (order) => {
+    if (order.status !== 'PAID') return '仅已支付订单可退订'
+    if (order.campStartDate && dayjs(order.campStartDate).isBefore(dayjs(), 'day')) return '已开营的订单不可退订'
+    const supplements = supplementMap[order.id] || []
+    if (supplements.some(s => s.status === 'PENDING')) return '存在私募补差在途，暂不可退订'
+    return null
+  }
+
+  const getUpgradeDisabledReason = (order) => {
+    if (order.status !== 'PAID') return '仅已支付订单可补差升档'
+    if (order.campStartDate && dayjs(order.campStartDate).isBefore(dayjs(), 'day')) return '已开营的订单不可补差升档'
+    const supplements = supplementMap[order.id] || []
+    if (supplements.some(s => s.status === 'PENDING')) return '存在待支付补差单，请先完成或取消'
+    return null
   }
 
   const getEffectiveLevel = (order) => {
@@ -279,11 +304,12 @@ function StudentPage() {
                     />
                     <Space direction="vertical" align="end" size="small">
                       <span className="price-tag" style={{ fontSize: '18px' }}>¥{order.totalAmount}</span>
-                      <Space size="small">
-                        {canUpgrade(order) && (
-                          <Button type="link" size="small" icon={<RiseOutlined />}
+                      <Space size="small" wrap>
+                        <Tooltip title={getUpgradeDisabledReason(order)}>
+                          <Button type="primary" size="small" icon={<RiseOutlined />}
+                            disabled={!canUpgrade(order)}
                             onClick={() => handleUpgrade(order.id)}>补差升档</Button>
-                        )}
+                        </Tooltip>
                         {order.status === 'PAID' && (
                           <Button type="link" size="small" icon={<FilePdfOutlined />}
                             onClick={() => window.open(pdfApi.getAgreementUrl(order.id), '_blank')}>协议</Button>
@@ -292,9 +318,11 @@ function StudentPage() {
                           <Button type="link" size="small" icon={<FilePdfOutlined />}
                             onClick={() => window.open(pdfApi.getInsuranceUrl(order.id), '_blank')}>保险单</Button>
                         )}
-                        {order.status === 'PAID' && !hasPendingSupplement && (
-                          <Button type="link" size="small" danger onClick={() => handleRefund(order.id)}>退订</Button>
-                        )}
+                        <Tooltip title={getRefundDisabledReason(order)}>
+                          <Button type="link" size="small" danger
+                            disabled={!canRefund(order)}
+                            onClick={() => handleRefund(order.id)}>退订</Button>
+                        </Tooltip>
                       </Space>
                     </Space>
                   </List.Item>

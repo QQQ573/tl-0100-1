@@ -221,14 +221,18 @@ public class SupplementOrderServiceImpl implements SupplementOrderService {
     }
 
     private String detectCurrentInsuranceLevel(List<OrderItem> items) {
-        List<Product> insuranceProducts = productRepository.findByTypeAndStatus(ProductType.INSURANCE, "ACTIVE");
+        List<Product> allProducts = productRepository.findByStatus("ACTIVE");
 
         for (OrderItem item : items) {
-            Optional<Product> matched = insuranceProducts.stream()
+            Optional<Product> matched = allProducts.stream()
                     .filter(p -> p.getId().equals(item.getProductId()))
                     .findFirst();
             if (matched.isPresent()) {
-                return matched.get().getLevel();
+                Product p = matched.get();
+                if (ProductType.INSURANCE.name().equals(p.getType()) ||
+                    ProductType.PACKAGE.name().equals(p.getType())) {
+                    return p.getLevel();
+                }
             }
         }
 
